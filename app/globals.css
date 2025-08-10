@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -6,6 +8,7 @@
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;
   --background-end-rgb: 255, 255, 255;
+  --font-nunito: 'Nunito', sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -44,6 +47,7 @@
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
   }
+
   .dark {
     --background: 0 0% 3.9%;
     --foreground: 0 0% 98%;
@@ -76,7 +80,29 @@
   * {
     @apply border-border;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-nunito;
+  }
+
+  /* Title styles with Nunito Bold */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-nunito);
+    font-weight: 700;
+  }
+
+  /* Regular text with Nunito Regular */
+  p,
+  span,
+  div,
+  li,
+  a {
+    font-family: var(--font-nunito);
+    font-weight: 400;
   }
 }

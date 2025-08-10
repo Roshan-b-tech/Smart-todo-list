@@ -9,6 +9,14 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        nunito: ['var(--font-nunito)', 'sans-serif'],
+        'nunito-bold': ['var(--font-nunito)', 'sans-serif'],
+      },
+      fontWeight: {
+        'nunito': '400',
+        'nunito-bold': '700',
+      },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
         'gradient-conic':
