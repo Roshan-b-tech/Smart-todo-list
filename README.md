@@ -75,11 +75,16 @@ CREATE DATABASE smart_todo_db;
 
 2. Copy environment file:
 ```bash
-cp env.example .env
+cp .env.example .env
 ```
 
 3. Update `.env` with your database credentials and AI API keys:
 ```env
+# Django Settings
+SECRET_KEY=your-secret-key-here
+DEBUG=True
+
+# Database Configuration
 DB_NAME=smart_todo_db
 DB_USER=your_username
 DB_PASSWORD=your_password
@@ -92,6 +97,11 @@ ANTHROPIC_API_KEY=your_anthropic_api_key
 GOOGLE_API_KEY=your_google_api_key
 LM_STUDIO_URL=http://localhost:1234/v1
 DEFAULT_AI_PROVIDER=openai
+```
+
+**Note**: Generate a Django SECRET_KEY using:
+```bash
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 ```
 
 #### Run Migrations
@@ -132,6 +142,133 @@ npm run dev
 ```
 
 The frontend will be available at `http://localhost:3000`
+
+## 🔧 Complete Setup Script
+
+For convenience, you can use this automated setup script:
+
+```bash
+#!/bin/bash
+# setup.sh - Complete setup script
+
+echo "🚀 Setting up Smart Todo List..."
+
+# Check prerequisites
+command -v python3 >/dev/null 2>&1 || { echo "❌ Python 3 is required but not installed. Aborting." >&2; exit 1; }
+command -v node >/dev/null 2>&1 || { echo "❌ Node.js is required but not installed. Aborting." >&2; exit 1; }
+command -v npm >/dev/null 2>&1 || { echo "❌ npm is required but not installed. Aborting." >&2; exit 1; }
+
+# Backend setup
+echo "📦 Setting up backend..."
+cd backend
+
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Copy environment file
+cp .env.example .env
+
+# Generate secret key
+SECRET_KEY=$(python3 -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())")
+sed -i "s/SECRET_KEY=.*/SECRET_KEY=$SECRET_KEY/" .env
+
+# Run migrations
+python3 manage.py makemigrations
+python3 manage.py migrate
+
+# Create superuser
+echo "👤 Creating superuser..."
+python3 manage.py createsuperuser --noinput --username admin --email admin@example.com
+
+echo "✅ Backend setup complete!"
+
+# Frontend setup
+echo "📦 Setting up frontend..."
+cd ../
+
+# Install dependencies
+npm install
+
+# Create environment file
+echo "NEXT_PUBLIC_API_URL=http://localhost:8000/api" > .env.local
+
+echo "✅ Frontend setup complete!"
+
+echo "🎉 Setup complete! To start the application:"
+echo "1. Backend: cd backend && python manage.py runserver"
+echo "2. Frontend: npm run dev"
+```
+
+## 🚨 Troubleshooting
+
+### Common Issues
+
+#### 1. Database Connection Error
+```
+django.db.utils.OperationalError: could not connect to server
+```
+**Solution**: Ensure PostgreSQL is running and credentials are correct in `.env`
+
+#### 2. Migration Errors
+```
+django.db.utils.ProgrammingError: relation "tasks_task" does not exist
+```
+**Solution**: Run migrations in order:
+```bash
+cd backend
+python manage.py makemigrations
+python manage.py migrate
+```
+
+#### 3. AI Service Errors
+```
+OpenAI failed: You tried to access openai.ChatCompletion, but this is no longer supported
+```
+**Solution**: The application uses the latest OpenAI API. Ensure your API key is valid and has sufficient credits.
+
+#### 4. Frontend API Connection Error
+```
+Failed to fetch from http://localhost:8000/api
+```
+**Solution**: 
+- Ensure backend server is running on port 8000
+- Check CORS settings in Django
+- Verify `NEXT_PUBLIC_API_URL` in `.env.local`
+
+#### 5. Task Creation Errors
+```
+null value in column "ai_suggestions" violates not-null constraint
+```
+**Solution**: This has been fixed in the latest version. Ensure you're using the updated code.
+
+### Environment Variables Checklist
+
+Ensure these are set in your `.env` file:
+
+```env
+# Required
+SECRET_KEY=your-secret-key-here
+DB_NAME=smart_todo_db
+DB_USER=your_username
+DB_PASSWORD=your_password
+DB_HOST=localhost
+DB_PORT=5432
+
+# At least one AI provider
+OPENAI_API_KEY=your_openai_api_key
+# OR
+ANTHROPIC_API_KEY=your_anthropic_api_key
+# OR
+GOOGLE_API_KEY=your_google_api_key
+# OR
+LM_STUDIO_URL=http://localhost:1234/v1
+
+DEFAULT_AI_PROVIDER=openai
+```
 
 ## 📚 API Documentation
 
@@ -175,6 +312,7 @@ Currently, the API uses `AllowAny` permissions. For production, implement proper
 - `POST /ai/suggestions/` - Get AI suggestions for task creation
 - `POST /ai/process-context/` - Process context with AI
 - `POST /ai/generate-insights/` - Generate productivity insights
+- `POST /ai/calculate-priority/` - Calculate AI-powered priority score
 
 ### Sample API Requests
 
@@ -206,6 +344,17 @@ curl -X POST http://localhost:8000/api/ai/suggestions/ \
   -d '{
     "title": "Client meeting preparation",
     "description": "Prepare agenda and materials for client meeting"
+  }'
+```
+
+#### Calculate Priority
+```bash
+curl -X POST http://localhost:8000/api/ai/calculate-priority/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Urgent client request",
+    "description": "Need proposal by end of day",
+    "deadline": "2025-08-12"
   }'
 ```
 
@@ -250,7 +399,7 @@ CREATE TABLE tasks_task (
     priority_score FLOAT DEFAULT 0.5,
     deadline TIMESTAMP,
     status VARCHAR(20) CHECK (status IN ('todo', 'in-progress', 'completed')),
-    ai_suggestions JSONB,
+    ai_suggestions JSONB DEFAULT '{}',
     tags JSONB DEFAULT '[]',
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
@@ -263,7 +412,7 @@ CREATE TABLE tasks_contextentry (
     id UUID PRIMARY KEY,
     content TEXT NOT NULL,
     source_type VARCHAR(20) CHECK (source_type IN ('email', 'message', 'note', 'other')),
-    processed_insights JSONB,
+    processed_insights JSONB DEFAULT '{}',
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
